@@ -11,16 +11,27 @@ import {
   Plus,
   Loader2,
 } from 'lucide-react';
-import { agregarSemestre, actualizarNotas, actualizarHoras, subirCertificado } from '@/app/actions/semestres';
+import {
+  agregarSemestre,
+  actualizarNotas,
+  actualizarHoras,
+  actualizarSemestre,
+  subirCertificado,
+} from '@/app/actions/semestres';
 import { RANGOS_COOFISAM, HORAS_TOTALES_REQUERIDAS, type Semestre } from '@/lib/types';
 import { StatCard } from '@/components/StatCard';
 import { ProgressBar } from '@/components/ProgressBar';
-import { StatusBadge } from '@/components/StatusBadge';
 import { LogoutButton } from '@/components/LogoutButton';
 
 interface DashboardClientProps {
   semestresIniciales: Semestre[];
 }
+
+const COLOR_ESTADO: Record<string, string> = {
+  Pagado: 'text-emerald-400',
+  Pendiente: 'text-amber-400',
+  'Por Cursar': 'text-zinc-400',
+};
 
 export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
   const semestres = semestresIniciales;
@@ -52,6 +63,20 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
         await actualizarNotas(id, texto);
       } catch (err) {
         console.error('Error al guardar la nota:', err);
+      }
+    });
+  };
+
+  const handleUpdateCampo = (
+    id: string,
+    campo: 'numero_semestre' | 'anio_periodo' | 'valor_matricula' | 'estado_pago',
+    valor: string | number
+  ) => {
+    startAddTransition(async () => {
+      try {
+        await actualizarSemestre(id, campo, valor);
+      } catch (err) {
+        console.error(`Error al guardar ${campo}:`, err);
       }
     });
   };
@@ -169,13 +194,63 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
                 )}
                 {semestres.map((s) => (
                   <tr key={s.id} className="hover:bg-zinc-900/20 transition-colors group">
-                    <td className="py-4 pl-4 pr-4 font-medium text-zinc-200">{s.numero_semestre}</td>
-                    <td className="py-4 px-4 text-xs font-mono text-zinc-500">{s.anio_periodo}</td>
+                    <td className="py-4 pl-4 pr-4 font-medium text-zinc-200">
+                      <input
+                        type="text"
+                        defaultValue={s.numero_semestre}
+                        onBlur={(e) => {
+                          const valor = e.target.value.trim();
+                          if (valor && valor !== s.numero_semestre) {
+                            handleUpdateCampo(s.id, 'numero_semestre', valor);
+                          }
+                        }}
+                        className="w-full bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                      />
+                    </td>
+                    <td className="py-4 px-4 text-xs font-mono text-zinc-500">
+                      <input
+                        type="text"
+                        defaultValue={s.anio_periodo}
+                        onBlur={(e) => {
+                          const valor = e.target.value.trim();
+                          if (valor !== s.anio_periodo) {
+                            handleUpdateCampo(s.id, 'anio_periodo', valor);
+                          }
+                        }}
+                        className="w-full bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all font-mono"
+                      />
+                    </td>
                     <td className="py-4 px-4 text-right font-mono text-xs tabular-nums text-zinc-300">
-                      ${Number(s.valor_matricula).toLocaleString('es-CO')}
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-zinc-600">$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          defaultValue={s.valor_matricula}
+                          onBlur={(e) => {
+                            const valor = Number(e.target.value);
+                            if (Number.isFinite(valor) && valor !== Number(s.valor_matricula)) {
+                              handleUpdateCampo(s.id, 'valor_matricula', valor);
+                            }
+                          }}
+                          className="w-24 bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none text-right transition-all"
+                        />
+                      </div>
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <StatusBadge estado={s.estado_pago} />
+                      <select
+                        value={s.estado_pago}
+                        onChange={(e) =>
+                          handleUpdateCampo(s.id, 'estado_pago', e.target.value)
+                        }
+                        className={`bg-transparent border border-transparent hover:border-zinc-800 rounded-lg px-1.5 py-1 text-xs font-mono font-medium text-center focus:outline-none focus:border-zinc-600 cursor-pointer transition-all ${
+                          COLOR_ESTADO[s.estado_pago] ?? 'text-zinc-400'
+                        }`}
+                      >
+                        <option className="bg-zinc-900" value="Pendiente">Pendiente</option>
+                        <option className="bg-zinc-900" value="Pagado">Pagado</option>
+                        <option className="bg-zinc-900" value="Por Cursar">Por Cursar</option>
+                      </select>
                     </td>
                     <td className="py-4 px-4 w-36">
                       <div className="space-y-1.5">

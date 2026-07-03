@@ -26,6 +26,52 @@ export async function actualizarNotas(id: string, notas: string) {
   revalidatePath('/');
 }
 
+type CampoEditable = 'numero_semestre' | 'anio_periodo' | 'valor_matricula' | 'estado_pago';
+
+const ESTADOS_VALIDOS = ['Pendiente', 'Pagado', 'Por Cursar'];
+
+export async function actualizarSemestre(
+  id: string,
+  campo: CampoEditable,
+  valor: string | number
+) {
+  await assertAuthenticated();
+
+  const updates: Record<string, string | number> = {};
+
+  switch (campo) {
+    case 'numero_semestre':
+    case 'anio_periodo': {
+      const texto = String(valor).trim();
+      if (!texto) throw new Error('El campo no puede quedar vacío.');
+      updates[campo] = texto;
+      break;
+    }
+    case 'valor_matricula': {
+      const numero = Number(valor);
+      if (!Number.isFinite(numero) || numero < 0) {
+        throw new Error('El valor de matrícula debe ser un número válido.');
+      }
+      updates.valor_matricula = numero;
+      break;
+    }
+    case 'estado_pago': {
+      const texto = String(valor);
+      if (!ESTADOS_VALIDOS.includes(texto)) {
+        throw new Error('Estado de pago no válido.');
+      }
+      updates.estado_pago = texto;
+      break;
+    }
+    default:
+      throw new Error('Campo no editable.');
+  }
+
+  const { error } = await getSupabaseServer().from('semestres').update(updates).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
 export async function actualizarHoras(id: string, horasCumplidas: number, horasRequeridas: number) {
   await assertAuthenticated();
 
