@@ -1,0 +1,387 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+import {
+  DollarSign,
+  Award,
+  TrendingUp,
+  UploadCloud,
+  FileText,
+  X,
+  Plus,
+  Loader2,
+} from 'lucide-react';
+import { agregarSemestre, actualizarNotas, subirCertificado } from '@/app/actions/semestres';
+import { RANGOS_COOFISAM, HORAS_TOTALES_REQUERIDAS, type Semestre } from '@/lib/types';
+import { StatCard } from '@/components/StatCard';
+import { ProgressBar } from '@/components/ProgressBar';
+import { StatusBadge } from '@/components/StatusBadge';
+import { LogoutButton } from '@/components/LogoutButton';
+
+interface DashboardClientProps {
+  semestresIniciales: Semestre[];
+}
+
+export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
+  const semestres = semestresIniciales;
+
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [promedioSimulado, setPromedioSimulado] = useState<number>(4.5);
+  const [isAdding, startAddTransition] = useTransition();
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const totalMatricula = useMemo(
+    () => semestres.reduce((acc, s) => acc + Number(s.valor_matricula), 0),
+    [semestres]
+  );
+  const totalHorasCumplidas = useMemo(
+    () => semestres.reduce((acc, s) => acc + (s.horas_cumplidas || 0), 0),
+    [semestres]
+  );
+
+  const rangoActivo = RANGOS_COOFISAM.find(
+    (r) => promedioSimulado >= r.min && promedioSimulado <= r.max
+  );
+  const porcentajeCondonacion = rangoActivo ? rangoActivo.condonacion : 0;
+  const totalARetornar = totalMatricula - totalMatricula * porcentajeCondonacion;
+
+  const handleUpdateNotas = (id: string, texto: string) => {
+    startAddTransition(async () => {
+      try {
+        await actualizarNotas(id, texto);
+      } catch (err) {
+        console.error('Error al guardar la nota:', err);
+      }
+    });
+  };
+
+  const handleUploadFoto = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    setUploadingId(id);
+
+    const formData = new FormData();
+    formData.set('file', file);
+
+    try {
+      await subirCertificado(id, formData);
+    } catch (err) {
+      console.error('Error al subir el certificado:', err);
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const handleAgregarSemestre = (formData: FormData) => {
+    setFormError(null);
+    startAddTransition(async () => {
+      try {
+        await agregarSemestre(formData);
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : 'Error al registrar el periodo.');
+      }
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-200 antialiased selection:bg-zinc-800 selection:text-white p-6 md:p-16">
+      <div className="max-w-5xl mx-auto space-y-16">
+        {/* Encabezado */}
+        <header className="border-b border-zinc-900 pb-10 space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-3">
+              <h1 className="font-fenix text-4xl font-normal text-zinc-100 tracking-tight">
+                Bitácora de Control: Beca Coofisam
+              </h1>
+              <p className="text-zinc-500 text-sm max-w-2xl leading-relaxed">
+                Registro modular de obligaciones financieras y cumplimiento de horas de servicio
+                social corporativo.
+              </p>
+            </div>
+            <LogoutButton />
+          </div>
+        </header>
+
+        {/* Tarjetas KPI */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard
+            icon={DollarSign}
+            label="Total Financiado"
+            value={`$${totalMatricula.toLocaleString('es-CO')}`}
+            suffix="COP"
+            helper="Carga acumulada de deuda ante la entidad."
+          />
+          <StatCard
+            icon={Award}
+            label="Servicio Social"
+            value={`${totalHorasCumplidas}`}
+            suffix={`/ ${HORAS_TOTALES_REQUERIDAS} horas`}
+            helper="Progreso global verificado en territorio."
+            accent={totalHorasCumplidas >= HORAS_TOTALES_REQUERIDAS ? 'emerald' : 'default'}
+          />
+          <StatCard
+            icon={TrendingUp}
+            label="Copago Obligatorio Proyectado"
+            value={`$${totalARetornar.toLocaleString('es-CO')}`}
+            helper="Monto neto de retorno según simulación académica."
+            accent={totalARetornar > 0 ? 'amber' : 'emerald'}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <ProgressBar value={totalHorasCumplidas} max={HORAS_TOTALES_REQUERIDAS} label="Progreso general de horas" />
+        </div>
+
+        {/* Tabla Principal */}
+        <section className="space-y-4">
+          <h2 className="font-fenix text-xl text-zinc-300 font-normal">Historial de Periodos</h2>
+          <div className="overflow-x-auto rounded-2xl border border-zinc-900">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-900 text-zinc-500 text-xs uppercase tracking-wider font-medium bg-zinc-900/30">
+                  <th className="py-4 pl-4 pr-4 font-medium">Semestre</th>
+                  <th className="py-4 px-4 font-medium">Periodo</th>
+                  <th className="py-4 px-4 font-medium text-right">Valor Matrícula</th>
+                  <th className="py-4 px-4 font-medium text-center">Estado</th>
+                  <th className="py-4 px-4 font-medium">Horas</th>
+                  <th className="py-4 px-4 font-medium">Notas / Observaciones</th>
+                  <th className="py-4 pl-4 pr-4 font-medium text-right">Soporte</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-900 text-zinc-400">
+                {semestres.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center text-zinc-600 text-xs font-mono">
+                      No hay periodos registrados todavía.
+                    </td>
+                  </tr>
+                )}
+                {semestres.map((s) => (
+                  <tr key={s.id} className="hover:bg-zinc-900/20 transition-colors group">
+                    <td className="py-4 pl-4 pr-4 font-medium text-zinc-200">{s.numero_semestre}</td>
+                    <td className="py-4 px-4 text-xs font-mono text-zinc-500">{s.anio_periodo}</td>
+                    <td className="py-4 px-4 text-right font-mono text-xs tabular-nums text-zinc-300">
+                      ${Number(s.valor_matricula).toLocaleString('es-CO')}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <StatusBadge estado={s.estado_pago} />
+                    </td>
+                    <td className="py-4 px-4 w-32">
+                      <div className="space-y-1">
+                        <span className="text-xs font-mono tabular-nums text-zinc-300">
+                          {s.horas_cumplidas} / {s.horas_requeridas}
+                        </span>
+                        <ProgressBar value={s.horas_cumplidas} max={s.horas_requeridas} compact />
+                      </div>
+                    </td>
+                    <td className="py-2 px-4">
+                      <input
+                        type="text"
+                        defaultValue={s.notas || ''}
+                        placeholder="Añadir nota..."
+                        onBlur={(e) => handleUpdateNotas(s.id, e.target.value)}
+                        className="w-full bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none py-1 text-xs text-zinc-400 placeholder-zinc-700 transition-all"
+                      />
+                    </td>
+                    <td className="py-4 pl-4 pr-4 text-right">
+                      {s.certificado_horas_url ? (
+                        <button
+                          onClick={() => setSelectedImage(s.certificado_horas_url)}
+                          className="inline-flex items-center gap-1 text-zinc-400 hover:text-white text-xs border border-zinc-800 hover:border-zinc-600 px-2 py-1 rounded-lg transition-all font-mono"
+                        >
+                          <FileText className="w-3 h-3" /> Ver
+                        </button>
+                      ) : (
+                        <label className="cursor-pointer inline-flex items-center gap-1 text-zinc-600 hover:text-zinc-400 text-xs transition-all font-mono">
+                          {uploadingId === s.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-zinc-500" />
+                          ) : (
+                            <>
+                              <UploadCloud className="w-3 h-3" /> Subir
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleUploadFoto(s.id, e)}
+                            disabled={uploadingId !== null}
+                          />
+                        </label>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Simulador y Rangos */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-16 pt-4 border-t border-zinc-900">
+          <div className="space-y-4">
+            <h3 className="font-fenix text-xl text-zinc-300 font-normal">Proyección</h3>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              Arrastra la barra para calibrar tu promedio general proyectado. Las fórmulas
+              internas recalcularán el impacto de copago basándose en los marcos legales de
+              Coofisam.
+            </p>
+            <div className="space-y-3 pt-2">
+              <div className="flex justify-between items-baseline">
+                <span className="text-zinc-400 text-xs font-mono">Promedio General:</span>
+                <span className="font-fenix text-3xl font-normal text-amber-500 tracking-tighter tabular-nums">
+                  {promedioSimulado.toFixed(2)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="3.5"
+                max="5.0"
+                step="0.05"
+                value={promedioSimulado}
+                onChange={(e) => setPromedioSimulado(parseFloat(e.target.value))}
+                className="w-full accent-amber-500 h-1 bg-zinc-800 rounded-full cursor-pointer appearance-none outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="font-fenix text-xl text-zinc-300 font-normal">Estructura de Rangos</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-zinc-900 text-zinc-600 uppercase tracking-wider font-medium">
+                    <th className="pb-3 font-medium">Intervalo Académico</th>
+                    <th className="pb-3 font-medium">Condonación</th>
+                    <th className="pb-3 text-right font-medium">Retorno Estimado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900/40 text-zinc-400">
+                  {RANGOS_COOFISAM.map((rango, idx) => {
+                    const valorAPagar = totalMatricula - totalMatricula * rango.condonacion;
+                    const esActivo = promedioSimulado >= rango.min && promedioSimulado <= rango.max;
+
+                    return (
+                      <tr
+                        key={idx}
+                        className={`transition-all ${
+                          esActivo
+                            ? 'text-zinc-100 font-bold bg-zinc-900/40 rounded-lg'
+                            : 'opacity-40 hover:opacity-70'
+                        }`}
+                      >
+                        <td className="py-3 px-2">{rango.label}</td>
+                        <td className="py-3 px-2">{rango.condonacion * 100}%</td>
+                        <td className="py-3 px-2 text-right tabular-nums">
+                          {valorAPagar === 0 ? '$ 0' : `$ ${valorAPagar.toLocaleString('es-CO')}`}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* Formulario Nuevo Semestre */}
+        <section className="border-t border-zinc-900 pt-12 space-y-6">
+          <div className="space-y-1">
+            <h3 className="font-fenix text-xl text-zinc-300 font-normal">Actualizar Parámetros</h3>
+            <p className="text-xs text-zinc-500">
+              Inyecta un nuevo registro de semestre o periodo académico al sistema.
+            </p>
+          </div>
+
+          <form action={handleAgregarSemestre} className="grid grid-cols-2 md:grid-cols-4 gap-6 items-end text-xs">
+            <div className="space-y-2">
+              <label className="text-zinc-500 block font-mono">Número Semestre</label>
+              <input
+                type="text"
+                name="numero_semestre"
+                placeholder="Ej: 6° Semestre"
+                required
+                className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-zinc-600 focus:outline-none p-2 rounded-lg text-zinc-300 transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-zinc-500 block font-mono">Año / Periodo</label>
+              <input
+                type="text"
+                name="anio_periodo"
+                placeholder="Ej: 2026-2"
+                className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-zinc-600 focus:outline-none p-2 rounded-lg text-zinc-300 transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-zinc-500 block font-mono">Valor Matrícula (COP)</label>
+              <input
+                type="number"
+                name="valor_matricula"
+                className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-zinc-600 focus:outline-none p-2 rounded-lg text-zinc-300 font-mono transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-zinc-500 block font-mono">Estado Pago</label>
+              <select
+                name="estado_pago"
+                defaultValue="Pendiente"
+                className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-zinc-600 focus:outline-none p-2 rounded-lg text-zinc-300 transition-all"
+              >
+                <option value="Pendiente">Pendiente</option>
+                <option value="Pagado">Pagado</option>
+                <option value="Por Cursar">Por Cursar</option>
+              </select>
+            </div>
+
+            <input type="hidden" name="horas_requeridas" value={40} />
+
+            {formError && (
+              <p className="col-span-2 md:col-span-4 text-xs text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg px-3 py-2">
+                {formError}
+              </p>
+            )}
+
+            <div className="col-span-2 md:col-span-4 flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={isAdding}
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-white disabled:opacity-60 text-zinc-950 font-medium px-4 py-2 rounded-lg transition-all font-mono"
+              >
+                {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                Registrar Periodo
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      {/* Lightbox */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-zinc-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-3xl w-full max-h-[80vh] flex items-center justify-center">
+            <button
+              className="absolute -top-10 right-0 text-zinc-400 hover:text-white flex items-center gap-1 text-xs font-mono"
+              onClick={() => setSelectedImage(null)}
+            >
+              <X className="w-4 h-4" /> Cerrar
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={selectedImage}
+              alt="Certificado Soporte"
+              className="max-w-full max-h-[75vh] object-contain border border-zinc-800 rounded-lg shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
