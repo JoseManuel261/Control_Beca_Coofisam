@@ -332,26 +332,39 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
           <div className="space-y-4">
             <h3 className="font-fenix text-xl text-zinc-300 font-normal">Proyección</h3>
             <p className="text-xs text-zinc-500 leading-relaxed">
-              Arrastra la barra para calibrar tu promedio general proyectado. Las fórmulas
+              Escribe tu promedio exacto o arrastra la barra para calibrarlo. Las fórmulas
               internas recalcularán el impacto de copago basándose en los marcos legales de
               Coofisam.
             </p>
             <div className="space-y-3 pt-2">
-              <div className="flex justify-between items-baseline">
+              <div className="flex justify-between items-baseline gap-3">
                 <span className="text-zinc-400 text-xs font-mono">Promedio General:</span>
-                <span className="font-fenix text-3xl font-normal text-amber-500 tracking-tighter tabular-nums">
-                  {promedioSimulado.toFixed(2)}
-                </span>
+                <input
+                  type="number"
+                  min={0}
+                  max={5}
+                  step={0.01}
+                  value={promedioSimulado}
+                  onChange={(e) => {
+                    const valor = parseFloat(e.target.value);
+                    if (Number.isFinite(valor)) setPromedioSimulado(valor);
+                  }}
+                  className="font-fenix text-3xl font-normal text-amber-500 tracking-tighter tabular-nums bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-amber-600 focus:outline-none text-right w-28 transition-all"
+                />
               </div>
               <input
                 type="range"
                 min="3.5"
                 max="5.0"
-                step="0.05"
-                value={promedioSimulado}
+                step="0.01"
+                value={Math.min(5, Math.max(3.5, promedioSimulado))}
                 onChange={(e) => setPromedioSimulado(parseFloat(e.target.value))}
                 className="w-full accent-amber-500 h-1 bg-zinc-800 rounded-full cursor-pointer appearance-none outline-none"
               />
+              <p className="text-[11px] text-zinc-600 font-mono">
+                La barra cubre el rango de condonación (3.50 – 5.00); el campo de arriba acepta
+                cualquier valor exacto.
+              </p>
             </div>
           </div>
 
