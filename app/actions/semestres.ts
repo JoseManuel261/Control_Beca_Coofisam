@@ -26,6 +26,27 @@ export async function actualizarNotas(id: string, notas: string) {
   revalidatePath('/');
 }
 
+export async function actualizarHoras(id: string, horasCumplidas: number, horasRequeridas: number) {
+  await assertAuthenticated();
+
+  if (
+    !Number.isFinite(horasCumplidas) ||
+    !Number.isFinite(horasRequeridas) ||
+    horasCumplidas < 0 ||
+    horasRequeridas < 0
+  ) {
+    throw new Error('Las horas deben ser números válidos y no negativos.');
+  }
+
+  const { error } = await getSupabaseServer()
+    .from('semestres')
+    .update({ horas_cumplidas: horasCumplidas, horas_requeridas: horasRequeridas })
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
 export async function agregarSemestre(formData: FormData) {
   await assertAuthenticated();
 

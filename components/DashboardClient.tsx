@@ -11,7 +11,7 @@ import {
   Plus,
   Loader2,
 } from 'lucide-react';
-import { agregarSemestre, actualizarNotas, subirCertificado } from '@/app/actions/semestres';
+import { agregarSemestre, actualizarNotas, actualizarHoras, subirCertificado } from '@/app/actions/semestres';
 import { RANGOS_COOFISAM, HORAS_TOTALES_REQUERIDAS, type Semestre } from '@/lib/types';
 import { StatCard } from '@/components/StatCard';
 import { ProgressBar } from '@/components/ProgressBar';
@@ -52,6 +52,16 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
         await actualizarNotas(id, texto);
       } catch (err) {
         console.error('Error al guardar la nota:', err);
+      }
+    });
+  };
+
+  const handleUpdateHoras = (id: string, horasCumplidas: number, horasRequeridas: number) => {
+    startAddTransition(async () => {
+      try {
+        await actualizarHoras(id, horasCumplidas, horasRequeridas);
+      } catch (err) {
+        console.error('Error al guardar las horas:', err);
       }
     });
   };
@@ -167,11 +177,35 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
                     <td className="py-4 px-4 text-center">
                       <StatusBadge estado={s.estado_pago} />
                     </td>
-                    <td className="py-4 px-4 w-32">
-                      <div className="space-y-1">
-                        <span className="text-xs font-mono tabular-nums text-zinc-300">
-                          {s.horas_cumplidas} / {s.horas_requeridas}
-                        </span>
+                    <td className="py-4 px-4 w-36">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1 text-xs font-mono tabular-nums text-zinc-300">
+                          <input
+                            type="number"
+                            min={0}
+                            defaultValue={s.horas_cumplidas}
+                            onBlur={(e) => {
+                              const cumplidas = Number(e.target.value);
+                              if (Number.isFinite(cumplidas) && cumplidas !== s.horas_cumplidas) {
+                                handleUpdateHoras(s.id, cumplidas, s.horas_requeridas);
+                              }
+                            }}
+                            className="w-12 bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none text-right transition-all"
+                          />
+                          <span className="text-zinc-600">/</span>
+                          <input
+                            type="number"
+                            min={0}
+                            defaultValue={s.horas_requeridas}
+                            onBlur={(e) => {
+                              const requeridas = Number(e.target.value);
+                              if (Number.isFinite(requeridas) && requeridas !== s.horas_requeridas) {
+                                handleUpdateHoras(s.id, s.horas_cumplidas, requeridas);
+                              }
+                            }}
+                            className="w-12 bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                          />
+                        </div>
                         <ProgressBar value={s.horas_cumplidas} max={s.horas_requeridas} compact />
                       </div>
                     </td>
