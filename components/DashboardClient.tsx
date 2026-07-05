@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
 import {
   DollarSign,
   Award,
@@ -10,6 +11,7 @@ import {
   X,
   Plus,
   Loader2,
+  Wallet,
 } from 'lucide-react';
 import {
   agregarSemestre,
@@ -19,9 +21,11 @@ import {
   subirCertificado,
 } from '@/app/actions/semestres';
 import { RANGOS_COOFISAM, HORAS_TOTALES_REQUERIDAS, type Semestre } from '@/lib/types';
+import { useToasts } from '@/lib/useToasts';
 import { StatCard } from '@/components/StatCard';
 import { ProgressBar } from '@/components/ProgressBar';
 import { LogoutButton } from '@/components/LogoutButton';
+import { ToastStack } from '@/components/ToastStack';
 
 interface DashboardClientProps {
   semestresIniciales: Semestre[];
@@ -41,6 +45,7 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
   const [promedioSimulado, setPromedioSimulado] = useState<number>(4.5);
   const [isAdding, startAddTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
+  const toasts = useToasts();
 
   const totalMatricula = useMemo(
     () => semestres.reduce((acc, s) => acc + Number(s.valor_matricula), 0),
@@ -61,10 +66,19 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
     startAddTransition(async () => {
       try {
         await actualizarNotas(id, texto);
+        toasts.success('Nota guardada.');
       } catch (err) {
         console.error('Error al guardar la nota:', err);
+        toasts.error('No se pudo guardar la nota. Intenta de nuevo.');
       }
     });
+  };
+
+  const LABEL_CAMPO: Record<string, string> = {
+    numero_semestre: 'Número de semestre',
+    anio_periodo: 'Año/Periodo',
+    valor_matricula: 'Valor de matrícula',
+    estado_pago: 'Estado de pago',
   };
 
   const handleUpdateCampo = (
@@ -75,8 +89,11 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
     startAddTransition(async () => {
       try {
         await actualizarSemestre(id, campo, valor);
+        toasts.success(`${LABEL_CAMPO[campo]} actualizado.`);
       } catch (err) {
         console.error(`Error al guardar ${campo}:`, err);
+        const msg = err instanceof Error ? err.message : 'Error al guardar.';
+        toasts.error(msg);
       }
     });
   };
@@ -85,8 +102,11 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
     startAddTransition(async () => {
       try {
         await actualizarHoras(id, horasCumplidas, horasRequeridas);
+        toasts.success('Horas actualizadas.');
       } catch (err) {
         console.error('Error al guardar las horas:', err);
+        const msg = err instanceof Error ? err.message : 'No se pudieron guardar las horas.';
+        toasts.error(msg);
       }
     });
   };
@@ -101,8 +121,11 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
 
     try {
       await subirCertificado(id, formData);
+      toasts.success('Certificado subido correctamente.');
     } catch (err) {
       console.error('Error al subir el certificado:', err);
+      const msg = err instanceof Error ? err.message : 'No se pudo subir el certificado.';
+      toasts.error(msg);
     } finally {
       setUploadingId(null);
     }
@@ -113,6 +136,7 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
     startAddTransition(async () => {
       try {
         await agregarSemestre(formData);
+        toasts.success('Periodo registrado correctamente.');
       } catch (err) {
         setFormError(err instanceof Error ? err.message : 'Error al registrar el periodo.');
       }
@@ -134,7 +158,15 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
                 social corporativo.
               </p>
             </div>
-            <LogoutButton />
+            <div className="flex items-center gap-3">
+              <Link
+                href="/finanzas"
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg transition-all font-mono"
+              >
+                <Wallet className="w-3.5 h-3.5" /> Finanzas
+              </Link>
+              <LogoutButton />
+            </div>
           </div>
         </header>
 
@@ -504,6 +536,8 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
           </div>
         </div>
       )}
+
+      <ToastStack toasts={toasts.toasts} onDismiss={toasts.dismiss} />
     </div>
   );
 }
