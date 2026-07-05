@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
-import { agregarIngreso, eliminarIngreso } from '@/app/finanzas/actions';
+import { agregarIngreso, eliminarIngreso, actualizarIngreso } from '@/app/finanzas/actions';
+import { formatearFecha, hoyISO } from '@/lib/finanzas/fecha';
 import type { Ingreso } from '@/lib/finanzas/types';
 import type { useToasts } from '@/lib/useToasts';
 import { ConfirmButton } from '@/components/finanzas/ConfirmButton';
@@ -30,6 +31,17 @@ export function IngresosPanel({ ingresos, toasts }: IngresosPanelProps) {
     });
   };
 
+  const handleEditar = (id: string, campo: 'fuente' | 'monto', valor: string | number) => {
+    startTransition(async () => {
+      try {
+        await actualizarIngreso(id, campo, valor);
+        toasts.success('Ingreso actualizado.');
+      } catch (err) {
+        toasts.handleError(err, 'No se pudo actualizar.');
+      }
+    });
+  };
+
   const handleEliminar = (id: string) => {
     startTransition(async () => {
       try {
@@ -43,7 +55,7 @@ export function IngresosPanel({ ingresos, toasts }: IngresosPanelProps) {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-baseline justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-fenix text-xl text-zinc-300 font-normal">Ingresos</h2>
         <span className="text-xs font-mono text-emerald-400">
           Total: ${total.toLocaleString('es-CO')}
@@ -69,7 +81,7 @@ export function IngresosPanel({ ingresos, toasts }: IngresosPanelProps) {
         <input
           type="date"
           name="fecha"
-          defaultValue={new Date().toISOString().slice(0, 10)}
+          defaultValue={hoyISO()}
           className="w-full sm:w-36 bg-zinc-900/50 border border-zinc-800 focus:border-zinc-600 focus:outline-none px-3 py-2.5 rounded-lg text-zinc-300 font-mono transition-all"
         />
         <button
@@ -93,17 +105,37 @@ export function IngresosPanel({ ingresos, toasts }: IngresosPanelProps) {
           </p>
         )}
         {ingresos.map((i) => (
-          <div key={i.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-zinc-900/20 transition-colors group">
-            <div>
-              <p className="text-sm text-zinc-200">{i.fuente}</p>
+          <div key={i.id} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-zinc-900/20 transition-colors group">
+            <div className="min-w-0">
+              <input
+                type="text"
+                defaultValue={i.fuente}
+                onBlur={(e) => {
+                  const valor = e.target.value.trim();
+                  if (valor && valor !== i.fuente) handleEditar(i.id, 'fuente', valor);
+                }}
+                className="w-full bg-transparent text-sm text-zinc-200 border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all truncate"
+              />
               <p className="text-xs font-mono text-zinc-500">
-                {new Date(i.fecha).toLocaleDateString('es-CO')}
+                {formatearFecha(i.fecha)}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-mono tabular-nums text-emerald-400">
-                ${Number(i.monto).toLocaleString('es-CO')}
-              </span>
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-0.5">
+                <span className="text-sm font-mono text-emerald-400">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  defaultValue={i.monto}
+                  onBlur={(e) => {
+                    const valor = Number(e.target.value);
+                    if (Number.isFinite(valor) && valor !== Number(i.monto)) {
+                      handleEditar(i.id, 'monto', valor);
+                    }
+                  }}
+                  className="w-20 bg-transparent text-sm font-mono tabular-nums text-emerald-400 text-right border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                />
+              </div>
               <ConfirmButton onConfirm={() => handleEliminar(i.id)}>
                 <Trash2 className="w-3.5 h-3.5" />
               </ConfirmButton>

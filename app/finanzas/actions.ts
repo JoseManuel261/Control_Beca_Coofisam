@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/session';
-import { anioMesDe } from '@/lib/finanzas/categorias';
 
 async function assertAuthenticated() {
   const cookieStore = await cookies();
@@ -37,7 +36,7 @@ export async function agregarGastoFijo(formData: FormData) {
       fecha_vencimiento: fechaVencimiento,
       categoria,
       estado: 'Pendiente',
-      anio_mes: anioMesDe(new Date(fechaVencimiento)),
+      anio_mes: fechaVencimiento.slice(0, 7),
       recurrente,
     },
   ]);
@@ -110,6 +109,76 @@ export async function actualizarEstadoGastoFijo(id: string, estado: 'Pendiente' 
   revalidatePath('/');
 }
 
+export async function actualizarGastoFijo(
+  id: string,
+  campo: 'nombre' | 'monto' | 'categoria' | 'fecha_vencimiento',
+  valor: string | number
+) {
+  await assertAuthenticated();
+  const updates: Record<string, string | number> = {};
+
+  if (campo === 'monto') {
+    const numero = Number(valor);
+    if (!Number.isFinite(numero) || numero < 0) throw new Error('Monto no válido.');
+    updates.monto = numero;
+  } else {
+    const texto = String(valor).trim();
+    if (!texto) throw new Error('El campo no puede quedar vacío.');
+    updates[campo] = texto;
+    if (campo === 'fecha_vencimiento') updates.anio_mes = texto.slice(0, 7);
+  }
+
+  const { error } = await getSupabaseServer().from('gastos_fijos').update(updates).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
+export async function actualizarGastoDiario(
+  id: string,
+  campo: 'descripcion' | 'monto' | 'categoria',
+  valor: string | number
+) {
+  await assertAuthenticated();
+  const updates: Record<string, string | number> = {};
+
+  if (campo === 'monto') {
+    const numero = Number(valor);
+    if (!Number.isFinite(numero) || numero <= 0) throw new Error('Monto no válido.');
+    updates.monto = numero;
+  } else {
+    const texto = String(valor).trim();
+    if (!texto) throw new Error('El campo no puede quedar vacío.');
+    updates[campo] = texto;
+  }
+
+  const { error } = await getSupabaseServer().from('gastos_diarios').update(updates).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
+export async function actualizarIngreso(
+  id: string,
+  campo: 'fuente' | 'monto',
+  valor: string | number
+) {
+  await assertAuthenticated();
+  const updates: Record<string, string | number> = {};
+
+  if (campo === 'monto') {
+    const numero = Number(valor);
+    if (!Number.isFinite(numero) || numero <= 0) throw new Error('Monto no válido.');
+    updates.monto = numero;
+  } else {
+    const texto = String(valor).trim();
+    if (!texto) throw new Error('El campo no puede quedar vacío.');
+    updates.fuente = texto;
+  }
+
+  const { error } = await getSupabaseServer().from('ingresos').update(updates).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
 export async function subirComprobante(id: string, formData: FormData) {
   await assertAuthenticated();
 
@@ -171,7 +240,7 @@ export async function agregarGastoDiario(formData: FormData) {
       monto,
       categoria,
       fecha,
-      anio_mes: anioMesDe(new Date(fecha)),
+      anio_mes: fecha.slice(0, 7),
     },
   ]);
 
@@ -219,7 +288,7 @@ export async function agregarIngreso(formData: FormData) {
   if (!Number.isFinite(monto) || monto <= 0) throw new Error('El monto debe ser mayor a 0.');
 
   const { error } = await getSupabaseServer().from('ingresos').insert([
-    { fuente, monto, fecha, anio_mes: anioMesDe(new Date(fecha)) },
+    { fuente, monto, fecha, anio_mes: fecha.slice(0, 7) },
   ]);
 
   if (error) throw new Error(error.message);

@@ -153,9 +153,9 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
       <div className="max-w-5xl mx-auto space-y-16">
         {/* Encabezado */}
         <header className="border-b border-zinc-900 pb-10 space-y-4">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-3">
-              <h1 className="font-fenix text-4xl font-normal text-zinc-100 tracking-tight">
+              <h1 className="font-fenix text-3xl sm:text-4xl font-normal text-zinc-100 tracking-tight">
                 Bitácora de Control: Beca Coofisam
               </h1>
               <p className="text-zinc-500 text-sm max-w-2xl leading-relaxed">
@@ -163,7 +163,7 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
                 social corporativo.
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/"
                 className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg transition-all font-mono"
@@ -208,7 +208,149 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
         {/* Tabla Principal */}
         <section className="space-y-4">
           <h2 className="font-fenix text-xl text-zinc-300 font-normal">Historial de Periodos</h2>
-          <div className="overflow-x-auto rounded-2xl border border-zinc-900">
+
+          {/* Tarjetas: mobile (<md) */}
+          <div className="md:hidden space-y-3">
+            {semestres.length === 0 && (
+              <p className="py-8 text-center text-zinc-600 text-xs font-mono rounded-2xl border border-zinc-900">
+                No hay periodos registrados todavía.
+              </p>
+            )}
+            {semestres.map((s) => (
+              <div key={s.id} className="rounded-2xl border border-zinc-900 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <input
+                    type="text"
+                    defaultValue={s.numero_semestre}
+                    onBlur={(e) => {
+                      const valor = e.target.value.trim();
+                      if (valor && valor !== s.numero_semestre) {
+                        handleUpdateCampo(s.id, 'numero_semestre', valor);
+                      }
+                    }}
+                    className="min-w-0 flex-1 bg-transparent font-medium text-zinc-200 border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                  />
+                  <select
+                    value={s.estado_pago}
+                    onChange={(e) => handleUpdateCampo(s.id, 'estado_pago', e.target.value)}
+                    className={`shrink-0 bg-transparent border border-zinc-800 rounded-lg px-1.5 py-1 text-xs font-mono font-medium focus:outline-none cursor-pointer transition-all ${
+                      COLOR_ESTADO[s.estado_pago] ?? 'text-zinc-400'
+                    }`}
+                  >
+                    <option className="bg-zinc-900" value="Pendiente">Pendiente</option>
+                    <option className="bg-zinc-900" value="Pagado">Pagado</option>
+                    <option className="bg-zinc-900" value="Por Cursar">Por Cursar</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-zinc-600 font-mono block">Periodo</span>
+                    <input
+                      type="text"
+                      defaultValue={s.anio_periodo}
+                      onBlur={(e) => {
+                        const valor = e.target.value.trim();
+                        if (valor !== s.anio_periodo) handleUpdateCampo(s.id, 'anio_periodo', valor);
+                      }}
+                      className="w-full bg-transparent font-mono text-zinc-300 border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-zinc-600 font-mono block">Matrícula</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-zinc-600">$</span>
+                      <input
+                        type="number"
+                        min={0}
+                        defaultValue={s.valor_matricula}
+                        onBlur={(e) => {
+                          const valor = Number(e.target.value);
+                          if (Number.isFinite(valor) && valor !== Number(s.valor_matricula)) {
+                            handleUpdateCampo(s.id, 'valor_matricula', valor);
+                          }
+                        }}
+                        className="w-full bg-transparent font-mono text-zinc-300 border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-600 font-mono">Horas</span>
+                    <div className="flex items-center gap-1 font-mono tabular-nums text-zinc-300">
+                      <input
+                        type="number"
+                        min={0}
+                        defaultValue={s.horas_cumplidas}
+                        onBlur={(e) => {
+                          const cumplidas = Number(e.target.value);
+                          if (Number.isFinite(cumplidas) && cumplidas !== s.horas_cumplidas) {
+                            handleUpdateHoras(s.id, cumplidas, s.horas_requeridas);
+                          }
+                        }}
+                        className="w-10 bg-transparent text-right border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                      />
+                      <span className="text-zinc-600">/</span>
+                      <input
+                        type="number"
+                        min={0}
+                        defaultValue={s.horas_requeridas}
+                        onBlur={(e) => {
+                          const requeridas = Number(e.target.value);
+                          if (Number.isFinite(requeridas) && requeridas !== s.horas_requeridas) {
+                            handleUpdateHoras(s.id, s.horas_cumplidas, requeridas);
+                          }
+                        }}
+                        className="w-10 bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  <ProgressBar value={s.horas_cumplidas} max={s.horas_requeridas} compact />
+                </div>
+
+                <input
+                  type="text"
+                  defaultValue={s.notas || ''}
+                  placeholder="Añadir nota..."
+                  onBlur={(e) => handleUpdateNotas(s.id, e.target.value)}
+                  className="w-full bg-transparent border-b border-zinc-900 focus:border-zinc-600 focus:outline-none py-1 text-xs text-zinc-400 placeholder-zinc-700 transition-all"
+                />
+
+                <div className="flex justify-end">
+                  {s.certificado_horas_url ? (
+                    <button
+                      onClick={() => setSelectedImage(s.certificado_horas_url)}
+                      className="inline-flex items-center gap-1 text-zinc-400 hover:text-white text-xs border border-zinc-800 hover:border-zinc-600 px-2 py-1 rounded-lg transition-all font-mono"
+                    >
+                      <FileText className="w-3 h-3" /> Ver soporte
+                    </button>
+                  ) : (
+                    <label className="cursor-pointer inline-flex items-center gap-1 text-zinc-600 hover:text-zinc-400 text-xs transition-all font-mono">
+                      {uploadingId === s.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-zinc-500" />
+                      ) : (
+                        <>
+                          <UploadCloud className="w-3 h-3" /> Subir soporte
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleUploadFoto(s.id, e)}
+                        disabled={uploadingId !== null}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tabla: desktop (>=md) */}
+          <div className="hidden md:block overflow-x-auto rounded-2xl border border-zinc-900">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-zinc-900 text-zinc-500 text-xs uppercase tracking-wider font-medium bg-zinc-900/30">

@@ -107,16 +107,16 @@ export function FinanzasClient({
     <div className="min-h-screen bg-zinc-950 text-zinc-200 antialiased p-6 md:p-16">
       <div className="max-w-5xl mx-auto space-y-14">
         <header className="border-b border-zinc-900 pb-8 space-y-4">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-2">
-              <h1 className="font-fenix text-4xl font-normal text-zinc-100 tracking-tight">
+              <h1 className="font-fenix text-3xl sm:text-4xl font-normal text-zinc-100 tracking-tight">
                 Gestión Financiera Personal
               </h1>
               <p className="text-zinc-500 text-sm">
                 Control de gastos fijos, gastos diarios, ingresos y diagnóstico con IA.
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <a
                 href="/api/export"
                 className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg transition-all font-mono"

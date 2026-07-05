@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
-import { agregarGastoDiario, eliminarGastoDiario } from '@/app/finanzas/actions';
+import { agregarGastoDiario, eliminarGastoDiario, actualizarGastoDiario } from '@/app/finanzas/actions';
+import { formatearFecha, hoyISO } from '@/lib/finanzas/fecha';
 import { CATEGORIAS_GASTOS_DIARIOS } from '@/lib/finanzas/categorias';
 import type { GastoDiario } from '@/lib/finanzas/types';
 import type { useToasts } from '@/lib/useToasts';
@@ -32,6 +33,21 @@ export function GastosDiariosPanel({ gastos, toasts }: GastosDiariosPanelProps) 
     });
   };
 
+  const handleEditar = (
+    id: string,
+    campo: 'descripcion' | 'monto' | 'categoria',
+    valor: string | number
+  ) => {
+    startTransition(async () => {
+      try {
+        await actualizarGastoDiario(id, campo, valor);
+        toasts.success('Gasto actualizado.');
+      } catch (err) {
+        toasts.handleError(err, 'No se pudo actualizar.');
+      }
+    });
+  };
+
   const handleEliminar = (id: string) => {
     startTransition(async () => {
       try {
@@ -45,7 +61,7 @@ export function GastosDiariosPanel({ gastos, toasts }: GastosDiariosPanelProps) 
 
   return (
     <section className="space-y-4">
-      <div className="flex items-baseline justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-fenix text-xl text-zinc-300 font-normal">Gastos Diarios</h2>
         <span className="text-xs font-mono text-zinc-500">
           Total del mes: <span className="text-zinc-300">${total.toLocaleString('es-CO')}</span>
@@ -90,7 +106,7 @@ export function GastosDiariosPanel({ gastos, toasts }: GastosDiariosPanelProps) 
           <input
             type="date"
             name="fecha"
-            defaultValue={new Date().toISOString().slice(0, 10)}
+            defaultValue={hoyISO()}
             className="w-full bg-zinc-950/60 border border-zinc-800 focus:border-zinc-600 focus:outline-none px-3 py-3 rounded-xl text-sm text-zinc-300 font-mono transition-all"
           />
           <button
@@ -122,15 +138,46 @@ export function GastosDiariosPanel({ gastos, toasts }: GastosDiariosPanelProps) 
             className="flex items-center justify-between px-4 py-3 hover:bg-zinc-900/20 transition-colors group"
           >
             <div className="min-w-0">
-              <p className="text-sm text-zinc-200 truncate">{g.descripcion}</p>
-              <p className="text-xs font-mono text-zinc-500">
-                {new Date(g.fecha).toLocaleDateString('es-CO')} · {g.categoria}
-              </p>
+              <input
+                type="text"
+                defaultValue={g.descripcion}
+                onBlur={(e) => {
+                  const valor = e.target.value.trim();
+                  if (valor && valor !== g.descripcion) handleEditar(g.id, 'descripcion', valor);
+                }}
+                className="w-full bg-transparent text-sm text-zinc-200 border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all truncate"
+              />
+              <div className="flex items-center gap-1 text-xs font-mono text-zinc-500">
+                <span>{formatearFecha(g.fecha)} ·</span>
+                <select
+                  value={g.categoria}
+                  onChange={(e) => handleEditar(g.id, 'categoria', e.target.value)}
+                  className="bg-transparent border-none focus:outline-none cursor-pointer"
+                >
+                  {CATEGORIAS_GASTOS_DIARIOS.map((cat) => (
+                    <option key={cat} value={cat} className="bg-zinc-900">
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-              <span className="text-sm font-mono tabular-nums text-zinc-300">
-                ${Number(g.monto).toLocaleString('es-CO')}
-              </span>
+              <div className="flex items-center gap-0.5">
+                <span className="text-sm font-mono text-zinc-300">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  defaultValue={g.monto}
+                  onBlur={(e) => {
+                    const valor = Number(e.target.value);
+                    if (Number.isFinite(valor) && valor !== Number(g.monto)) {
+                      handleEditar(g.id, 'monto', valor);
+                    }
+                  }}
+                  className="w-16 bg-transparent text-sm font-mono tabular-nums text-zinc-300 text-right border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                />
+              </div>
               <ConfirmButton onConfirm={() => handleEliminar(g.id)}>
                 <Trash2 className="w-3.5 h-3.5" />
               </ConfirmButton>

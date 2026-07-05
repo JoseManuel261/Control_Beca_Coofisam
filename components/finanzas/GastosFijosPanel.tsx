@@ -5,6 +5,7 @@ import { Plus, UploadCloud, FileText, Loader2, Trash2 } from 'lucide-react';
 import {
   agregarGastoFijo,
   actualizarEstadoGastoFijo,
+  actualizarGastoFijo,
   subirComprobante,
   eliminarGastoFijo,
 } from '@/app/finanzas/actions';
@@ -71,6 +72,21 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
     }
   };
 
+  const handleEditarCampo = (
+    id: string,
+    campo: 'nombre' | 'monto' | 'categoria' | 'fecha_vencimiento',
+    valor: string | number
+  ) => {
+    startTransition(async () => {
+      try {
+        await actualizarGastoFijo(id, campo, valor);
+        toasts.success('Gasto actualizado.');
+      } catch (err) {
+        toasts.handleError(err, 'No se pudo actualizar.');
+      }
+    });
+  };
+
   const handleEliminar = (id: string) => {
     startTransition(async () => {
       try {
@@ -84,7 +100,7 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
 
   return (
     <section className="space-y-4">
-      <div className="flex items-baseline justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-fenix text-xl text-zinc-300 font-normal">Gastos Fijos</h2>
         <div className="text-right text-xs font-mono text-zinc-500">
           Total: <span className="text-zinc-300">${total.toLocaleString('es-CO')}</span>
@@ -96,7 +112,123 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-zinc-900">
+      {/* Tarjetas: mobile (<md) */}
+      <div className="md:hidden space-y-3">
+        {gastos.length === 0 && (
+          <p className="py-8 text-center text-zinc-600 text-xs font-mono rounded-2xl border border-zinc-900">
+            No hay gastos fijos registrados para este periodo.
+          </p>
+        )}
+        {gastos.map((g) => (
+          <div key={g.id} className="rounded-2xl border border-zinc-900 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <input
+                type="text"
+                defaultValue={g.nombre}
+                onBlur={(e) => {
+                  const valor = e.target.value.trim();
+                  if (valor && valor !== g.nombre) handleEditarCampo(g.id, 'nombre', valor);
+                }}
+                className="min-w-0 flex-1 bg-transparent font-medium text-zinc-200 border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+              />
+              <button
+                onClick={() => handleToggleEstado(g)}
+                disabled={isPending}
+                className={`shrink-0 text-[11px] font-mono font-medium px-2 py-0.5 rounded-full border transition-all ${
+                  g.estado === 'Pagado'
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                }`}
+              >
+                {g.estado}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="space-y-1">
+                <span className="text-zinc-600 font-mono block">Categoría</span>
+                <select
+                  value={g.categoria}
+                  onChange={(e) => handleEditarCampo(g.id, 'categoria', e.target.value)}
+                  className="w-full bg-transparent font-mono text-zinc-300 border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                >
+                  {CATEGORIAS_GASTOS_FIJOS.map((cat) => (
+                    <option key={cat} value={cat} className="bg-zinc-900">
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <span className="text-zinc-600 font-mono block">Monto</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-zinc-600">$</span>
+                  <input
+                    type="number"
+                    min={0}
+                    defaultValue={g.monto}
+                    onBlur={(e) => {
+                      const valor = Number(e.target.value);
+                      if (Number.isFinite(valor) && valor !== Number(g.monto)) {
+                        handleEditarCampo(g.id, 'monto', valor);
+                      }
+                    }}
+                    className="w-full bg-transparent font-mono text-zinc-300 border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1 text-xs">
+              <span className="text-zinc-600 font-mono block">Vence</span>
+              <input
+                type="date"
+                defaultValue={g.fecha_vencimiento}
+                onBlur={(e) => {
+                  if (e.target.value && e.target.value !== g.fecha_vencimiento) {
+                    handleEditarCampo(g.id, 'fecha_vencimiento', e.target.value);
+                  }
+                }}
+                className="w-full bg-transparent font-mono text-zinc-300 border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              {g.comprobante_url ? (
+                <button
+                  onClick={() => setPreviewUrl(g.comprobante_url)}
+                  className="inline-flex items-center gap-1 text-zinc-400 hover:text-white text-xs border border-zinc-800 hover:border-zinc-600 px-2 py-1 rounded-lg transition-all font-mono"
+                >
+                  <FileText className="w-3 h-3" /> Ver comprobante
+                </button>
+              ) : (
+                <label className="cursor-pointer inline-flex items-center gap-1 text-zinc-600 hover:text-zinc-400 text-xs transition-all font-mono">
+                  {uploadingId === g.id ? (
+                    <Loader2 className="w-3 h-3 animate-spin text-zinc-500" />
+                  ) : (
+                    <>
+                      <UploadCloud className="w-3 h-3" /> Subir comprobante
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => handleUpload(g.id, e)}
+                    disabled={uploadingId !== null}
+                  />
+                </label>
+              )}
+              <ConfirmButton onConfirm={() => handleEliminar(g.id)} className="text-zinc-700 hover:text-red-400 transition-colors">
+                <Trash2 className="w-3.5 h-3.5" />
+              </ConfirmButton>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabla: desktop (>=md) */}
+      <div className="hidden md:block overflow-x-auto rounded-2xl border border-zinc-900">
         <table className="w-full text-left text-sm border-collapse">
           <thead>
             <tr className="border-b border-zinc-900 text-zinc-500 text-xs uppercase tracking-wider font-medium bg-zinc-900/30">
@@ -118,13 +250,58 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
             )}
             {gastos.map((g) => (
               <tr key={g.id} className="hover:bg-zinc-900/20 transition-colors">
-                <td className="py-3 pl-4 pr-4 text-zinc-200">{g.nombre}</td>
-                <td className="py-3 px-4 text-xs font-mono text-zinc-500">{g.categoria}</td>
-                <td className="py-3 px-4 text-right font-mono text-xs tabular-nums text-zinc-300">
-                  ${Number(g.monto).toLocaleString('es-CO')}
+                <td className="py-3 pl-4 pr-4 text-zinc-200">
+                  <input
+                    type="text"
+                    defaultValue={g.nombre}
+                    onBlur={(e) => {
+                      const valor = e.target.value.trim();
+                      if (valor && valor !== g.nombre) handleEditarCampo(g.id, 'nombre', valor);
+                    }}
+                    className="w-full bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                  />
                 </td>
                 <td className="py-3 px-4 text-xs font-mono text-zinc-500">
-                  {new Date(g.fecha_vencimiento).toLocaleDateString('es-CO')}
+                  <select
+                    value={g.categoria}
+                    onChange={(e) => handleEditarCampo(g.id, 'categoria', e.target.value)}
+                    className="bg-transparent border border-transparent hover:border-zinc-800 rounded-lg px-1 focus:outline-none focus:border-zinc-600 cursor-pointer transition-all"
+                  >
+                    {CATEGORIAS_GASTOS_FIJOS.map((cat) => (
+                      <option key={cat} value={cat} className="bg-zinc-900">
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="py-3 px-4 text-right font-mono text-xs tabular-nums text-zinc-300">
+                  <div className="flex items-center justify-end gap-1">
+                    <span className="text-zinc-600">$</span>
+                    <input
+                      type="number"
+                      min={0}
+                      defaultValue={g.monto}
+                      onBlur={(e) => {
+                        const valor = Number(e.target.value);
+                        if (Number.isFinite(valor) && valor !== Number(g.monto)) {
+                          handleEditarCampo(g.id, 'monto', valor);
+                        }
+                      }}
+                      className="w-20 bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none text-right transition-all"
+                    />
+                  </div>
+                </td>
+                <td className="py-3 px-4 text-xs font-mono text-zinc-500">
+                  <input
+                    type="date"
+                    defaultValue={g.fecha_vencimiento}
+                    onBlur={(e) => {
+                      if (e.target.value && e.target.value !== g.fecha_vencimiento) {
+                        handleEditarCampo(g.id, 'fecha_vencimiento', e.target.value);
+                      }
+                    }}
+                    className="bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-zinc-600 focus:outline-none transition-all"
+                  />
                 </td>
                 <td className="py-3 px-4 text-center">
                   <button
