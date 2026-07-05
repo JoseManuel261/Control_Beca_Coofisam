@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Plus, UploadCloud, FileText, Loader2, Trash2 } from 'lucide-react';
+import { Plus, UploadCloud, FileText, Loader2, Trash2, RefreshCw } from 'lucide-react';
 import {
   agregarGastoFijo,
   actualizarEstadoGastoFijo,
@@ -160,7 +160,14 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
                 </select>
               </div>
               <div className="space-y-1">
-                <span className="text-zinc-600 font-mono block">Monto</span>
+                <span className="text-zinc-600 font-mono flex items-center gap-1">
+                  Monto
+                  {g.recurrente && (
+                    <span title="Recurrente: monto copiado del mes anterior, verifica si cambió">
+                      <RefreshCw className="w-2.5 h-2.5 text-amber-500" />
+                    </span>
+                  )}
+                </span>
                 <div className="flex items-center gap-1">
                   <span className="text-zinc-600">$</span>
                   <input
@@ -276,6 +283,11 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
                 </td>
                 <td className="py-3 px-4 text-right font-mono text-xs tabular-nums text-zinc-300">
                   <div className="flex items-center justify-end gap-1">
+                    {g.recurrente && (
+                      <span title="Recurrente: monto copiado del mes anterior, verifica si cambió">
+                        <RefreshCw className="w-2.5 h-2.5 text-amber-500" />
+                      </span>
+                    )}
                     <span className="text-zinc-600">$</span>
                     <input
                       type="number"
