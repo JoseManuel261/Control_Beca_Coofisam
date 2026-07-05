@@ -29,17 +29,25 @@ export async function agregarGastoFijo(formData: FormData) {
   if (!Number.isFinite(monto) || monto < 0) throw new Error('El monto no es válido.');
   if (!fechaVencimiento) throw new Error('La fecha de vencimiento es obligatoria.');
 
-  const { error } = await getSupabaseServer().from('gastos_fijos').insert([
-    {
+  const MESES_A_GENERAR = 12; // este mes + los siguientes 11
+  const [anioBase, mesBase, diaVencimiento] = fechaVencimiento.split('-');
+  const cantidadMeses = recurrente ? MESES_A_GENERAR : 1;
+
+  const registros = Array.from({ length: cantidadMeses }, (_, i) => {
+    const fecha = new Date(Number(anioBase), Number(mesBase) - 1 + i, 1);
+    const anioMes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+    return {
       nombre,
       monto,
-      fecha_vencimiento: fechaVencimiento,
+      fecha_vencimiento: `${anioMes}-${diaVencimiento}`,
       categoria,
-      estado: 'Pendiente',
-      anio_mes: fechaVencimiento.slice(0, 7),
+      estado: 'Pendiente' as const,
+      anio_mes: anioMes,
       recurrente,
-    },
-  ]);
+    };
+  });
+
+  const { error } = await getSupabaseServer().from('gastos_fijos').insert(registros);
 
   if (error) throw new Error(error.message);
   revalidatePath('/');
