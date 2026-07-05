@@ -11,6 +11,7 @@ import {
 import { CATEGORIAS_GASTOS_FIJOS } from '@/lib/finanzas/categorias';
 import type { GastoFijo } from '@/lib/finanzas/types';
 import type { useToasts } from '@/lib/useToasts';
+import { ConfirmButton } from '@/components/finanzas/ConfirmButton';
 
 interface GastosFijosPanelProps {
   gastos: GastoFijo[];
@@ -47,7 +48,7 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
         await actualizarEstadoGastoFijo(g.id, g.estado === 'Pagado' ? 'Pendiente' : 'Pagado');
         toasts.success('Estado actualizado.');
       } catch (err) {
-        toasts.error(err instanceof Error ? err.message : 'No se pudo actualizar el estado.');
+        toasts.handleError(err, 'No se pudo actualizar el estado.');
       }
     });
   };
@@ -64,7 +65,7 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
       await subirComprobante(id, formData);
       toasts.success('Comprobante subido.');
     } catch (err) {
-      toasts.error(err instanceof Error ? err.message : 'No se pudo subir el comprobante.');
+      toasts.handleError(err, 'No se pudo subir el comprobante.');
     } finally {
       setUploadingId(null);
     }
@@ -76,7 +77,7 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
         await eliminarGastoFijo(id);
         toasts.success('Gasto eliminado.');
       } catch (err) {
-        toasts.error(err instanceof Error ? err.message : 'No se pudo eliminar.');
+        toasts.handleError(err, 'No se pudo eliminar.');
       }
     });
   };
@@ -165,13 +166,9 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
                         />
                       </label>
                     )}
-                    <button
-                      onClick={() => handleEliminar(g.id)}
-                      className="text-zinc-700 hover:text-red-400 transition-colors"
-                      aria-label="Eliminar gasto fijo"
-                    >
+                    <ConfirmButton onConfirm={() => handleEliminar(g.id)} className="text-zinc-700 hover:text-red-400 transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    </ConfirmButton>
                   </div>
                 </td>
               </tr>
@@ -180,7 +177,7 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
         </table>
       </div>
 
-      <form action={handleAgregar} className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end text-xs">
+      <form action={handleAgregar} className="grid grid-cols-2 md:grid-cols-6 gap-4 items-end text-xs">
         <div className="space-y-1.5">
           <label className="text-zinc-500 block font-mono">Nombre</label>
           <input
@@ -225,6 +222,14 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
             className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-zinc-600 focus:outline-none p-2 rounded-lg text-zinc-300 font-mono transition-all"
           />
         </div>
+        <label className="flex items-center gap-2 text-zinc-500 font-mono pb-2 col-span-2 md:col-span-1">
+          <input
+            type="checkbox"
+            name="recurrente"
+            className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-900 accent-amber-500"
+          />
+          Recurrente cada mes
+        </label>
         <button
           type="submit"
           disabled={isPending}
@@ -234,7 +239,7 @@ export function GastosFijosPanel({ gastos, anioMes, toasts }: GastosFijosPanelPr
           Añadir
         </button>
         {formError && (
-          <p className="col-span-2 md:col-span-5 text-xs text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg px-3 py-2">
+          <p className="col-span-2 md:col-span-6 text-xs text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg px-3 py-2">
             {formError}
           </p>
         )}

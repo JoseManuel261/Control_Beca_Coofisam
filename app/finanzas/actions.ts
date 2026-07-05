@@ -24,6 +24,7 @@ export async function agregarGastoFijo(formData: FormData) {
   const monto = Number(formData.get('monto') ?? 0);
   const fechaVencimiento = String(formData.get('fecha_vencimiento') ?? '');
   const categoria = String(formData.get('categoria') ?? 'Otros');
+  const recurrente = formData.get('recurrente') === 'on';
 
   if (!nombre) throw new Error('El nombre del gasto es obligatorio.');
   if (!Number.isFinite(monto) || monto < 0) throw new Error('El monto no es válido.');
@@ -37,11 +38,64 @@ export async function agregarGastoFijo(formData: FormData) {
       categoria,
       estado: 'Pendiente',
       anio_mes: anioMesDe(new Date(fechaVencimiento)),
+      recurrente,
     },
   ]);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/finanzas');
+  revalidatePath('/');
+}
+
+/**
+ * Si el periodo solicitado no tiene gastos fijos todavía, copia los gastos
+ * marcados como recurrentes del periodo inmediatamente anterior (estado
+ * "Pendiente", sin comprobante). Se llama automáticamente al abrir un mes.
+ */
+export async function asegurarRecurrentesDelMes(anioMes: string): Promise<boolean> {
+  await assertAuthenticated();
+  const supabase = getSupabaseServer();
+
+  const { count } = await supabase
+    .from('gastos_fijos')
+    .select('id', { count: 'exact', head: true })
+    .eq('anio_mes', anioMes);
+
+  if (count && count > 0) return false;
+
+  const [anio, mes] = anioMes.split('-').map(Number);
+  const fechaAnterior = new Date(anio, mes - 2, 1);
+  const anioMesAnterior = `${fechaAnterior.getFullYear()}-${String(
+    fechaAnterior.getMonth() + 1
+  ).padStart(2, '0')}`;
+
+  const { data: recurrentes } = await supabase
+    .from('gastos_fijos')
+    .select('*')
+    .eq('anio_mes', anioMesAnterior)
+    .eq('recurrente', true);
+
+  if (!recurrentes || recurrentes.length === 0) return false;
+
+  const nuevos = recurrentes.map((g) => {
+    const diaVencimiento = g.fecha_vencimiento.split('-')[2] ?? '05';
+    return {
+      nombre: g.nombre,
+      monto: g.monto,
+      categoria: g.categoria,
+      fecha_vencimiento: `${anioMes}-${diaVencimiento}`,
+      estado: 'Pendiente' as const,
+      anio_mes: anioMes,
+      recurrente: true,
+    };
+  });
+
+  const { error } = await supabase.from('gastos_fijos').insert(nuevos);
+  if (error) {
+    console.error('Error al copiar gastos recurrentes:', error.message);
+    return false;
+  }
+  revalidatePath('/');
+  return true;
 }
 
 export async function actualizarEstadoGastoFijo(id: string, estado: 'Pendiente' | 'Pagado') {
@@ -53,7 +107,7 @@ export async function actualizarEstadoGastoFijo(id: string, estado: 'Pendiente' 
     .eq('id', id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/finanzas');
+  revalidatePath('/');
 }
 
 export async function subirComprobante(id: string, formData: FormData) {
@@ -88,14 +142,14 @@ export async function subirComprobante(id: string, formData: FormData) {
 
   if (updateError) throw new Error(updateError.message);
 
-  revalidatePath('/finanzas');
+  revalidatePath('/');
 }
 
 export async function eliminarGastoFijo(id: string) {
   await assertAuthenticated();
   const { error } = await getSupabaseServer().from('gastos_fijos').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/finanzas');
+  revalidatePath('/');
 }
 
 // ---------- Gastos Diarios ----------
@@ -122,14 +176,14 @@ export async function agregarGastoDiario(formData: FormData) {
   ]);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/finanzas');
+  revalidatePath('/');
 }
 
 export async function eliminarGastoDiario(id: string) {
   await assertAuthenticated();
   const { error } = await getSupabaseServer().from('gastos_diarios').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/finanzas');
+  revalidatePath('/');
 }
 
 // ---------- Presupuestos ----------
@@ -149,5 +203,68 @@ export async function definirPresupuesto(categoria: string, montoLimite: number,
     );
 
   if (error) throw new Error(error.message);
-  revalidatePath('/finanzas');
+  revalidatePath('/');
+}
+
+// ---------- Ingresos ----------
+
+export async function agregarIngreso(formData: FormData) {
+  await assertAuthenticated();
+
+  const fuente = String(formData.get('fuente') ?? '').trim();
+  const monto = Number(formData.get('monto') ?? 0);
+  const fecha = String(formData.get('fecha') ?? '') || new Date().toISOString().slice(0, 10);
+
+  if (!fuente) throw new Error('La fuente del ingreso es obligatoria.');
+  if (!Number.isFinite(monto) || monto <= 0) throw new Error('El monto debe ser mayor a 0.');
+
+  const { error } = await getSupabaseServer().from('ingresos').insert([
+    { fuente, monto, fecha, anio_mes: anioMesDe(new Date(fecha)) },
+  ]);
+
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
+export async function eliminarIngreso(id: string) {
+  await assertAuthenticated();
+  const { error } = await getSupabaseServer().from('ingresos').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
+// ---------- Histórico (para el gráfico de tendencia) ----------
+
+export async function obtenerHistorico(periodos: string[]) {
+  await assertAuthenticated();
+  const supabase = getSupabaseServer();
+
+  const [fijosRes, diariosRes, ingresosRes] = await Promise.all([
+    supabase.from('gastos_fijos').select('monto, anio_mes').in('anio_mes', periodos),
+    supabase.from('gastos_diarios').select('monto, anio_mes').in('anio_mes', periodos),
+    supabase.from('ingresos').select('monto, anio_mes').in('anio_mes', periodos),
+  ]);
+
+  const totalPorPeriodo = (
+    filas: { monto: number; anio_mes: string }[] | null
+  ): Record<string, number> => {
+    const mapa: Record<string, number> = {};
+    for (const fila of filas ?? []) {
+      mapa[fila.anio_mes] = (mapa[fila.anio_mes] ?? 0) + Number(fila.monto);
+    }
+    return mapa;
+  };
+
+  const fijosPorMes = totalPorPeriodo(fijosRes.data);
+  const diariosPorMes = totalPorPeriodo(diariosRes.data);
+  const ingresosPorMes = totalPorPeriodo(ingresosRes.data);
+
+  return periodos
+    .slice()
+    .reverse()
+    .map((anioMes) => ({
+      anioMes,
+      totalGastos: (fijosPorMes[anioMes] ?? 0) + (diariosPorMes[anioMes] ?? 0),
+      totalIngresos: ingresosPorMes[anioMes] ?? 0,
+    }));
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import {
   DollarSign,
@@ -42,7 +42,15 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
 
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [promedioSimulado, setPromedioSimulado] = useState<number>(4.5);
+  const [promedioSimulado, setPromedioSimulado] = useState<number>(() => {
+    if (typeof window === 'undefined') return 4.5;
+    const guardado = localStorage.getItem('promedioSimulado');
+    return guardado ? parseFloat(guardado) : 4.5;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('promedioSimulado', String(promedioSimulado));
+  }, [promedioSimulado]);
   const [isAdding, startAddTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const toasts = useToasts();
@@ -92,8 +100,7 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
         toasts.success(`${LABEL_CAMPO[campo]} actualizado.`);
       } catch (err) {
         console.error(`Error al guardar ${campo}:`, err);
-        const msg = err instanceof Error ? err.message : 'Error al guardar.';
-        toasts.error(msg);
+        toasts.handleError(err, 'Error al guardar.');
       }
     });
   };
@@ -105,8 +112,7 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
         toasts.success('Horas actualizadas.');
       } catch (err) {
         console.error('Error al guardar las horas:', err);
-        const msg = err instanceof Error ? err.message : 'No se pudieron guardar las horas.';
-        toasts.error(msg);
+        toasts.handleError(err, 'No se pudieron guardar las horas.');
       }
     });
   };
@@ -124,8 +130,7 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
       toasts.success('Certificado subido correctamente.');
     } catch (err) {
       console.error('Error al subir el certificado:', err);
-      const msg = err instanceof Error ? err.message : 'No se pudo subir el certificado.';
-      toasts.error(msg);
+      toasts.handleError(err, 'No se pudo subir el certificado.');
     } finally {
       setUploadingId(null);
     }
@@ -160,7 +165,7 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
             </div>
             <div className="flex items-center gap-3">
               <Link
-                href="/finanzas"
+                href="/"
                 className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg transition-all font-mono"
               >
                 <Wallet className="w-3.5 h-3.5" /> Finanzas

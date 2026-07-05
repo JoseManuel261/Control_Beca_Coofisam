@@ -8,6 +8,15 @@ export interface GastoFijo {
   comprobante_url: string | null;
   anio_mes: string; // 'YYYY-MM'
   notas: string | null;
+  recurrente: boolean;
+}
+
+export interface Ingreso {
+  id: string;
+  fuente: string;
+  monto: number;
+  fecha: string;
+  anio_mes: string;
 }
 
 export interface GastoDiario {
@@ -30,7 +39,15 @@ export interface ResumenFinanciero {
   anioMes: string;
   totalGastosFijos: number;
   totalGastosDiarios: number;
+  totalIngresos: number;
   totalGeneral: number;
+  balance: number;
   porCategoria: Record<string, number>;
   presupuestos: Presupuesto[];
+}
+
+export interface HistoricoPeriodo {
+  anioMes: string;
+  totalGastos: number;
+  totalIngresos: number;
 }

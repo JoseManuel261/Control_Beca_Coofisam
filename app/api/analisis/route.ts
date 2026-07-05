@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         // Verifica en console.groq.com/docs/models cuál es el modelo vigente
         // en el catálogo de Groq antes de desplegar; los proveedores rotan
         // modelos con frecuencia.
-        model: process.env.GROQ_MODEL || 'llama3-70b-8192',
+        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
         messages: [
           {
             role: 'system',
@@ -90,9 +90,11 @@ function construirPrompt(resumen: ResumenFinanciero): string {
 
   return `Analiza mi situación financiera del periodo ${resumen.anioMes}:
 
+Total ingresos: $${resumen.totalIngresos.toLocaleString('es-CO')}
 Total gastos fijos: $${resumen.totalGastosFijos.toLocaleString('es-CO')}
 Total gastos diarios: $${resumen.totalGastosDiarios.toLocaleString('es-CO')}
-Total general: $${resumen.totalGeneral.toLocaleString('es-CO')}
+Total gastos: $${resumen.totalGeneral.toLocaleString('es-CO')}
+Balance (ingresos - gastos): $${resumen.balance.toLocaleString('es-CO')}
 
 Gastos por categoría:
 ${categorias || 'Sin gastos registrados.'}
@@ -101,7 +103,7 @@ Presupuestos definidos:
 ${presupuestos}
 
 Dame:
-1. Un diagnóstico breve de mi situación este mes.
+1. Un diagnóstico breve de mi situación este mes (considera el balance, no solo los gastos).
 2. Alertas si alguna categoría superó o está cerca de su presupuesto.
 3. 3 consejos concretos de ahorro para el próximo mes, basados en estos datos específicos.`;
 }

@@ -6,6 +6,7 @@ import { agregarGastoDiario, eliminarGastoDiario } from '@/app/finanzas/actions'
 import { CATEGORIAS_GASTOS_DIARIOS } from '@/lib/finanzas/categorias';
 import type { GastoDiario } from '@/lib/finanzas/types';
 import type { useToasts } from '@/lib/useToasts';
+import { ConfirmButton } from '@/components/finanzas/ConfirmButton';
 
 interface GastosDiariosPanelProps {
   gastos: GastoDiario[];
@@ -37,7 +38,7 @@ export function GastosDiariosPanel({ gastos, toasts }: GastosDiariosPanelProps) 
         await eliminarGastoDiario(id);
         toasts.success('Gasto eliminado.');
       } catch (err) {
-        toasts.error(err instanceof Error ? err.message : 'No se pudo eliminar.');
+        toasts.handleError(err, 'No se pudo eliminar.');
       }
     });
   };
@@ -130,13 +131,9 @@ export function GastosDiariosPanel({ gastos, toasts }: GastosDiariosPanelProps) 
               <span className="text-sm font-mono tabular-nums text-zinc-300">
                 ${Number(g.monto).toLocaleString('es-CO')}
               </span>
-              <button
-                onClick={() => handleEliminar(g.id)}
-                className="text-zinc-700 hover:text-red-400 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
-                aria-label="Eliminar gasto"
-              >
+              <ConfirmButton onConfirm={() => handleEliminar(g.id)}>
                 <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              </ConfirmButton>
             </div>
           </div>
         ))}
