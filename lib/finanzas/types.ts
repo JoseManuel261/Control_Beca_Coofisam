@@ -35,6 +35,15 @@ export interface Presupuesto {
   anio_mes: string;
 }
 
+export interface MovimientoAhorro {
+  id: string;
+  tipo: 'deposito' | 'retiro';
+  monto: number;
+  concepto: string | null;
+  fecha: string;
+  anio_mes: string;
+}
+
 export interface ResumenFinanciero {
   anioMes: string;
   totalGastosFijos: number;
@@ -44,6 +53,8 @@ export interface ResumenFinanciero {
   balance: number;
   porCategoria: Record<string, number>;
   presupuestos: Presupuesto[];
+  ahorroDelMes: number;
+  saldoAhorroAcumulado: number;
 }
 
 export interface HistoricoPeriodo {

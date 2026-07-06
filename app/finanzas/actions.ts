@@ -293,6 +293,59 @@ export async function definirPresupuesto(categoria: string, montoLimite: number,
   revalidatePath('/');
 }
 
+// ---------- Ahorros (saldo acumulado, no se reinicia por mes) ----------
+
+export async function agregarMovimientoAhorro(formData: FormData) {
+  await assertAuthenticated();
+
+  const tipo = String(formData.get('tipo') ?? 'deposito');
+  const monto = Number(formData.get('monto') ?? 0);
+  const concepto = String(formData.get('concepto') ?? '').trim() || null;
+  const fecha = String(formData.get('fecha') ?? '') || new Date().toISOString().slice(0, 10);
+
+  if (tipo !== 'deposito' && tipo !== 'retiro') throw new Error('Tipo de movimiento no válido.');
+  if (!Number.isFinite(monto) || monto <= 0) throw new Error('El monto debe ser mayor a 0.');
+
+  const { error } = await getSupabaseServer().from('movimientos_ahorro').insert([
+    { tipo, monto, concepto, fecha, anio_mes: fecha.slice(0, 7) },
+  ]);
+
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
+export async function actualizarMovimientoAhorro(
+  id: string,
+  campo: 'monto' | 'concepto',
+  valor: string | number
+) {
+  await assertAuthenticated();
+  const updates: Record<string, string | number> = {};
+
+  if (campo === 'monto') {
+    const numero = Number(valor);
+    if (!Number.isFinite(numero) || numero <= 0) throw new Error('Monto no válido.');
+    updates.monto = numero;
+  } else {
+    updates.concepto = String(valor).trim();
+  }
+
+  const { error } = await getSupabaseServer()
+    .from('movimientos_ahorro')
+    .update(updates)
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
+export async function eliminarMovimientoAhorro(id: string) {
+  await assertAuthenticated();
+  const { error } = await getSupabaseServer().from('movimientos_ahorro').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
 // ---------- Ingresos ----------
 
 export async function agregarIngreso(formData: FormData) {

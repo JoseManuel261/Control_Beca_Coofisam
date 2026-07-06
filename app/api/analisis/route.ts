@@ -96,6 +96,9 @@ Total gastos diarios: $${resumen.totalGastosDiarios.toLocaleString('es-CO')}
 Total gastos: $${resumen.totalGeneral.toLocaleString('es-CO')}
 Balance (ingresos - gastos): $${resumen.balance.toLocaleString('es-CO')}
 
+Ahorro movido este mes (depósitos - retiros): $${resumen.ahorroDelMes.toLocaleString('es-CO')}
+Saldo acumulado de ahorros (histórico, no solo este mes): $${resumen.saldoAhorroAcumulado.toLocaleString('es-CO')}
+
 Gastos por categoría:
 ${categorias || 'Sin gastos registrados.'}
 
@@ -103,7 +106,7 @@ Presupuestos definidos:
 ${presupuestos}
 
 Dame:
-1. Un diagnóstico breve de mi situación este mes (considera el balance, no solo los gastos).
+1. Un diagnóstico breve de mi situación este mes (considera el balance y el ahorro, no solo los gastos).
 2. Alertas si alguna categoría superó o está cerca de su presupuesto.
 3. 3 consejos concretos de ahorro para el próximo mes, basados en estos datos específicos.`;
 }

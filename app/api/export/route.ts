@@ -13,7 +13,7 @@ export async function GET() {
 
   const supabase = getSupabaseServer();
 
-  const [semestres, gastosFijos, gastosDiarios, ingresos, presupuestos, aportesCompartidos, gastosCompartidos, colchonAjuste] =
+  const [semestres, gastosFijos, gastosDiarios, ingresos, presupuestos, aportesCompartidos, gastosCompartidos, colchonAjuste, movimientosAhorro] =
     await Promise.all([
       supabase.from('semestres').select('*'),
       supabase.from('gastos_fijos').select('*'),
@@ -23,6 +23,7 @@ export async function GET() {
       supabase.from('aportes_compartidos').select('*'),
       supabase.from('gastos_compartidos').select('*'),
       supabase.from('colchon_ajuste').select('*'),
+      supabase.from('movimientos_ahorro').select('*'),
     ]);
 
   const backup = {
@@ -35,6 +36,7 @@ export async function GET() {
     aportes_compartidos: aportesCompartidos.data ?? [],
     gastos_compartidos: gastosCompartidos.data ?? [],
     colchon_ajuste: colchonAjuste.data ?? [],
+    movimientos_ahorro: movimientosAhorro.data ?? [],
   };
 
   return new NextResponse(JSON.stringify(backup, null, 2), {
