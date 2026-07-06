@@ -8,7 +8,6 @@ import { MonthPicker } from '@/components/finanzas/MonthPicker';
 import { GastosFijosPanel } from '@/components/finanzas/GastosFijosPanel';
 import { GastosDiariosPanel } from '@/components/finanzas/GastosDiariosPanel';
 import { IngresosPanel } from '@/components/finanzas/IngresosPanel';
-import { AhorrosPanel } from '@/components/finanzas/AhorrosPanel';
 import { PresupuestoBar } from '@/components/finanzas/PresupuestoBar';
 import { AnalisisIA } from '@/components/finanzas/AnalisisIA';
 import { TendenciaChart } from '@/components/finanzas/TendenciaChart';
@@ -22,7 +21,6 @@ import type {
   GastoDiario,
   Ingreso,
   Presupuesto,
-  MovimientoAhorro,
   ResumenFinanciero,
 } from '@/lib/finanzas/types';
 
@@ -32,7 +30,6 @@ interface FinanzasClientProps {
   gastosDiarios: GastoDiario[];
   ingresos: Ingreso[];
   presupuestos: Presupuesto[];
-  movimientosAhorro: MovimientoAhorro[];
 }
 
 export function FinanzasClient({
@@ -41,7 +38,6 @@ export function FinanzasClient({
   gastosDiarios,
   ingresos,
   presupuestos,
-  movimientosAhorro,
 }: FinanzasClientProps) {
   const router = useRouter();
   const toasts = useToasts();
@@ -85,23 +81,6 @@ export function FinanzasClient({
 
   const totalGeneral = totalFijos + totalDiarios;
 
-  const saldoAhorroAcumulado = useMemo(
-    () =>
-      movimientosAhorro.reduce(
-        (acc, m) => acc + (m.tipo === 'deposito' ? Number(m.monto) : -Number(m.monto)),
-        0
-      ),
-    [movimientosAhorro]
-  );
-
-  const ahorroDelMes = useMemo(
-    () =>
-      movimientosAhorro
-        .filter((m) => m.anio_mes === anioMesInicial)
-        .reduce((acc, m) => acc + (m.tipo === 'deposito' ? Number(m.monto) : -Number(m.monto)), 0),
-    [movimientosAhorro, anioMesInicial]
-  );
-
   const resumen: ResumenFinanciero = {
     anioMes: anioMesInicial,
     totalGastosFijos: totalFijos,
@@ -111,8 +90,6 @@ export function FinanzasClient({
     balance: totalIngresos - totalGeneral,
     porCategoria,
     presupuestos,
-    ahorroDelMes,
-    saldoAhorroAcumulado,
   };
 
   const handleDefinirPresupuesto = (categoria: string, monto: number) => {
@@ -173,11 +150,6 @@ export function FinanzasClient({
               <span className={resumen.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}>
                 ${resumen.balance.toLocaleString('es-CO')}
               </span>
-              {' · '}
-              Ahorros:{' '}
-              <span className={saldoAhorroAcumulado >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                ${saldoAhorroAcumulado.toLocaleString('es-CO')}
-              </span>
             </div>
           </div>
         </header>
@@ -188,7 +160,6 @@ export function FinanzasClient({
         </section>
 
         <IngresosPanel ingresos={ingresos} toasts={toasts} />
-        <AhorrosPanel movimientos={movimientosAhorro} toasts={toasts} />
         <GastosFijosPanel gastos={gastosFijos} anioMes={anioMesInicial} toasts={toasts} />
         <GastosDiariosPanel gastos={gastosDiarios} toasts={toasts} />
 
