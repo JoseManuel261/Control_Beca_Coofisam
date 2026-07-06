@@ -13,13 +13,17 @@ export async function GET() {
 
   const supabase = getSupabaseServer();
 
-  const [semestres, gastosFijos, gastosDiarios, ingresos, presupuestos] = await Promise.all([
-    supabase.from('semestres').select('*'),
-    supabase.from('gastos_fijos').select('*'),
-    supabase.from('gastos_diarios').select('*'),
-    supabase.from('ingresos').select('*'),
-    supabase.from('presupuestos').select('*'),
-  ]);
+  const [semestres, gastosFijos, gastosDiarios, ingresos, presupuestos, aportesCompartidos, gastosCompartidos, colchonAjuste] =
+    await Promise.all([
+      supabase.from('semestres').select('*'),
+      supabase.from('gastos_fijos').select('*'),
+      supabase.from('gastos_diarios').select('*'),
+      supabase.from('ingresos').select('*'),
+      supabase.from('presupuestos').select('*'),
+      supabase.from('aportes_compartidos').select('*'),
+      supabase.from('gastos_compartidos').select('*'),
+      supabase.from('colchon_ajuste').select('*'),
+    ]);
 
   const backup = {
     exportado_en: new Date().toISOString(),
@@ -28,6 +32,9 @@ export async function GET() {
     gastos_diarios: gastosDiarios.data ?? [],
     ingresos: ingresos.data ?? [],
     presupuestos: presupuestos.data ?? [],
+    aportes_compartidos: aportesCompartidos.data ?? [],
+    gastos_compartidos: gastosCompartidos.data ?? [],
+    colchon_ajuste: colchonAjuste.data ?? [],
   };
 
   return new NextResponse(JSON.stringify(backup, null, 2), {

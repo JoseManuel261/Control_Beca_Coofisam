@@ -12,6 +12,7 @@ import {
   Plus,
   Loader2,
   Wallet,
+  Users,
 } from 'lucide-react';
 import {
   agregarSemestre,
@@ -169,6 +170,12 @@ export function DashboardClient({ semestresIniciales }: DashboardClientProps) {
                 className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg transition-all font-mono"
               >
                 <Wallet className="w-3.5 h-3.5" /> Finanzas
+              </Link>
+              <Link
+                href="/compartido"
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg transition-all font-mono"
+              >
+                <Users className="w-3.5 h-3.5" /> Compartido
               </Link>
               <LogoutButton />
             </div>
