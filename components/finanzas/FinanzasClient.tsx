@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { GraduationCap, Download } from 'lucide-react';
+import { GraduationCap, Download, Users } from 'lucide-react';
 import { MonthPicker } from '@/components/finanzas/MonthPicker';
 import { GastosFijosPanel } from '@/components/finanzas/GastosFijosPanel';
 import { GastosDiariosPanel } from '@/components/finanzas/GastosDiariosPanel';
@@ -124,6 +124,12 @@ export function FinanzasClient({
               >
                 <Download className="w-3.5 h-3.5" />
               </a>
+              <Link
+                href="/compartido"
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg transition-all font-mono"
+              >
+                <Users className="w-3.5 h-3.5" /> Compartido
+              </Link>
               <Link
                 href="/beca"
                 className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg transition-all font-mono"
