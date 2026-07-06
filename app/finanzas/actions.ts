@@ -30,16 +30,23 @@ export async function agregarGastoFijo(formData: FormData) {
   if (!fechaVencimiento) throw new Error('La fecha de vencimiento es obligatoria.');
 
   const MESES_A_GENERAR = 12; // este mes + los siguientes 11
-  const [anioBase, mesBase, diaVencimiento] = fechaVencimiento.split('-');
+  const [anioBase, mesBase, diaVencimiento] = fechaVencimiento.split('-').map(Number);
   const cantidadMeses = recurrente ? MESES_A_GENERAR : 1;
 
   const registros = Array.from({ length: cantidadMeses }, (_, i) => {
-    const fecha = new Date(Number(anioBase), Number(mesBase) - 1 + i, 1);
+    const mesIndex0 = mesBase - 1 + i;
+    const fecha = new Date(anioBase, mesIndex0, 1);
     const anioMes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+
+    // Si el día de vencimiento (ej. 31) no existe en este mes (ej. septiembre
+    // solo tiene 30), se usa el último día válido de ese mes en su lugar.
+    const ultimoDiaDelMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
+    const diaFinal = String(Math.min(diaVencimiento, ultimoDiaDelMes)).padStart(2, '0');
+
     return {
       nombre,
       monto,
-      fecha_vencimiento: `${anioMes}-${diaVencimiento}`,
+      fecha_vencimiento: `${anioMes}-${diaFinal}`,
       categoria,
       estado: 'Pendiente' as const,
       anio_mes: anioMes,
@@ -83,13 +90,16 @@ export async function asegurarRecurrentesDelMes(anioMes: string): Promise<boolea
 
   if (!recurrentes || recurrentes.length === 0) return false;
 
+  const ultimoDiaDelMes = new Date(anio, mes, 0).getDate();
+
   const nuevos = recurrentes.map((g) => {
-    const diaVencimiento = g.fecha_vencimiento.split('-')[2] ?? '05';
+    const diaVencimientoOriginal = Number(g.fecha_vencimiento.split('-')[2] ?? '5');
+    const diaFinal = String(Math.min(diaVencimientoOriginal, ultimoDiaDelMes)).padStart(2, '0');
     return {
       nombre: g.nombre,
       monto: g.monto,
       categoria: g.categoria,
-      fecha_vencimiento: `${anioMes}-${diaVencimiento}`,
+      fecha_vencimiento: `${anioMes}-${diaFinal}`,
       estado: 'Pendiente' as const,
       anio_mes: anioMes,
       recurrente: true,
