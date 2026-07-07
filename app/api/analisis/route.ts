@@ -30,12 +30,16 @@ export async function POST(request: Request) {
   const prompt = construirPrompt(resumen);
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20_000);
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
+      signal: controller.signal,
       body: JSON.stringify({
         // Verifica en console.groq.com/docs/models cuál es el modelo vigente
         // en el catálogo de Groq antes de desplegar; los proveedores rotan
@@ -53,6 +57,8 @@ export async function POST(request: Request) {
         max_tokens: 900,
       }),
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const detalle = await response.text();
@@ -72,6 +78,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ analisis });
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return NextResponse.json(
+        { error: 'El servicio de IA tardó demasiado en responder (más de 20s). Intenta de nuevo.' },
+        { status: 504 }
+      );
+    }
     console.error('Error al contactar Groq:', err);
     return NextResponse.json({ error: 'No se pudo contactar al servicio de IA.' }, { status: 502 });
   }

@@ -211,6 +211,11 @@ export async function subirComprobante(id: string, formData: FormData) {
     throw new Error('Formato no soportado. Usa imagen (jpg/png/webp) o PDF.');
   }
 
+  const MAX_BYTES = 5 * 1024 * 1024;
+  if (file.size > MAX_BYTES) {
+    throw new Error('El archivo supera el límite de 5MB.');
+  }
+
   const fileName = `${id}-${Date.now()}.${fileExt}`;
   const supabase = getSupabaseServer();
 

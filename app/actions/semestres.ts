@@ -124,7 +124,17 @@ export async function subirCertificado(id: string, formData: FormData) {
     throw new Error('No se recibió ningún archivo.');
   }
 
-  const fileExt = file.name.split('.').pop();
+  const extensionesPermitidas = ['jpg', 'jpeg', 'png', 'webp'];
+  const fileExt = (file.name.split('.').pop() || '').toLowerCase();
+  if (!extensionesPermitidas.includes(fileExt)) {
+    throw new Error('Formato no soportado. Usa una imagen (jpg/png/webp).');
+  }
+
+  const MAX_BYTES = 5 * 1024 * 1024;
+  if (file.size > MAX_BYTES) {
+    throw new Error('El archivo supera el límite de 5MB.');
+  }
+
   const fileName = `${id}-${Date.now()}.${fileExt}`;
 
   const { error: uploadError } = await getSupabaseServer().storage

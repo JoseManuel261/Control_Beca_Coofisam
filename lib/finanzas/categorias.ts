@@ -9,8 +9,6 @@ export const CATEGORIAS_GASTOS_DIARIOS = [
 ] as const;
 
 export const CATEGORIAS_GASTOS_FIJOS = [
-  'Arriendo',
-  'Servicios Públicos',
   'Internet',
   'Suscripciones',
   'Seguros',
